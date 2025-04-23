@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 // @ts-ignore
-import { Server } from "@modelcontextprotocol/sdk/dist/server/index.js";
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 // @ts-ignore
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/dist/server/stdio.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 // @ts-ignore
 import {
   CallToolRequest,
   CallToolRequestSchema,
   ListToolsRequestSchema,
   Tool,
-} from "@modelcontextprotocol/sdk/dist/types.js";
+} from "@modelcontextprotocol/sdk/types.js";
 
 // Add Node.js process declaration
 declare const process: {
