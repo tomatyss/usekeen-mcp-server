@@ -1,0 +1,192 @@
+#!/usr/bin/env node
+// @ts-ignore
+import { Server } from "@modelcontextprotocol/sdk/dist/server/index.js";
+// @ts-ignore
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/dist/server/stdio.js";
+// @ts-ignore
+import {
+  CallToolRequest,
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+  Tool,
+} from "@modelcontextprotocol/sdk/dist/types.js";
+
+// Add Node.js process declaration
+declare const process: {
+  env: Record<string, string | undefined>;
+  exit: (code?: number) => never;
+};
+
+/**
+ * Interface for package documentation search arguments
+ * Defines the structure of arguments passed to the usekeen_package_doc_search tool
+ */
+interface PackageDocSearchArgs {
+  package_name: string;
+  query?: string;
+}
+
+/**
+ * Tool definition for package documentation search
+ * This tool allows searching for documentation of packages and services
+ */
+const packageDocSearchTool: Tool = {
+  name: "usekeen_package_doc_search",
+  description: "Search documentation of packages and services to find implementation details, examples, and specifications",
+  inputSchema: {
+    type: "object",
+    properties: {
+      package_name: {
+        type: "string",
+        description: "Name of the package or service to search documentation for (e.g. 'react', 'aws-s3', 'docker')"
+      },
+      query: {
+        type: "string",
+        description: "Search term to find specific information within the package/service documentation (e.g. 'file upload example', 'authentication methods')",
+      }
+    },
+    required: ["package_name"]
+  }
+};
+
+/**
+ * Client for interacting with the UseKeen API
+ * Handles authentication and making requests to the API
+ */
+class UseKeenClient {
+  private apiKey: string;
+  private baseUrl: string;
+
+  /**
+   * Create a new UseKeenClient
+   * @param apiKey - The API key for authenticating with the UseKeen API
+   */
+  constructor(apiKey: string) {
+    this.apiKey = apiKey;
+    this.baseUrl = "https://usekeen-api-283956349806.us-central1.run.app";
+  }
+
+  /**
+   * Search for documentation of a package
+   * @param packageName - The name of the package to search for
+   * @param query - Optional search term to find specific information
+   * @returns The search results from the UseKeen API
+   */
+  async searchPackageDocumentation(packageName: string, query?: string): Promise<any> {
+    try {
+      const response = await fetch(`${this.baseUrl}/tools/package_doc_search`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          properties: {
+            package_name: packageName,
+            query: query || ""
+          },
+          api_key: this.apiKey
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API request failed: ${response.status} ${errorText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error("Error calling UseKeen API:", error);
+      throw error;
+    }
+  }
+}
+
+/**
+ * Main function to start the MCP server
+ * Sets up the server, registers request handlers, and connects to the transport
+ */
+async function main() {
+  const apiKey = process.env.USEKEEN_API_KEY;
+
+  if (!apiKey) {
+    console.error("Please set USEKEEN_API_KEY environment variable");
+    process.exit(1);
+  }
+
+  console.error("Starting UseKeen Documentation MCP Server...");
+  const server = new Server(
+    {
+      name: "UseKeen Documentation MCP Server",
+      version: "1.0.0",
+    },
+    {
+      capabilities: {
+        tools: {},
+      },
+    }
+  );
+
+  const useKeenClient = new UseKeenClient(apiKey);
+
+  // Handle tool calls
+  server.setRequestHandler(
+    CallToolRequestSchema,
+    async (request: CallToolRequest) => {
+      console.error("Received CallToolRequest:", request);
+      try {
+        if (!request.params.arguments) {
+          throw new Error("No arguments provided");
+        }
+
+        if (request.params.name === "usekeen_package_doc_search") {
+          const args = request.params.arguments as unknown as PackageDocSearchArgs;
+          if (!args.package_name) {
+            throw new Error("Missing required argument: package_name");
+          }
+          
+          const response = await useKeenClient.searchPackageDocumentation(
+            args.package_name,
+            args.query
+          );
+          
+          return {
+            content: [{ type: "text", text: JSON.stringify(response) }],
+          };
+        } else {
+          throw new Error(`Unknown tool: ${request.params.name}`);
+        }
+      } catch (error) {
+        console.error("Error executing tool:", error);
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                error: error instanceof Error ? error.message : String(error),
+              }),
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  // Handle tool listing
+  server.setRequestHandler(ListToolsRequestSchema, async () => {
+    console.error("Received ListToolsRequest");
+    return {
+      tools: [packageDocSearchTool],
+    };
+  });
+
+  const transport = new StdioServerTransport();
+  console.error("Connecting server to transport...");
+  await server.connect(transport);
+
+  console.error("UseKeen Documentation MCP Server running on stdio");
+}
+
+main().catch((error) => {
+  console.error("Fatal error in main():", error);
+  process.exit(1);
+});
