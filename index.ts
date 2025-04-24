@@ -74,18 +74,27 @@ class UseKeenClient {
    */
   async searchPackageDocumentation(packageName: string, query?: string): Promise<any> {
     try {
-      const response = await fetch(`${this.baseUrl}/tools/package_doc_search`, {
+      // Create URL with query parameters for the API key
+      const url = new URL(`${this.baseUrl}/tools/package_doc_search`);
+      url.searchParams.append('api_key', this.apiKey);
+      
+      // Log the request details for debugging
+      console.error(`API Request URL: ${url.toString()}`);
+      
+      // Create the request body with direct parameters
+      const requestBody = {
+        package_name: packageName,
+        query: query || ""
+      };
+      
+      console.error(`API Request Body: ${JSON.stringify(requestBody)}`);
+      
+      const response = await fetch(url.toString(), {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          properties: {
-            package_name: packageName,
-            query: query || ""
-          },
-          api_key: this.apiKey
-        })
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
@@ -114,6 +123,8 @@ async function main() {
   }
 
   console.error("Starting UseKeen Documentation MCP Server...");
+  console.error(`Using API Key: ${apiKey}`);
+  
   const server = new Server(
     {
       name: "UseKeen Documentation MCP Server",
@@ -132,7 +143,7 @@ async function main() {
   server.setRequestHandler(
     CallToolRequestSchema,
     async (request: CallToolRequest) => {
-      console.error("Received CallToolRequest:", request);
+      console.error("Received CallToolRequest:", JSON.stringify(request, null, 2));
       try {
         if (!request.params.arguments) {
           throw new Error("No arguments provided");
@@ -140,6 +151,8 @@ async function main() {
 
         if (request.params.name === "usekeen_package_doc_search") {
           const args = request.params.arguments as unknown as PackageDocSearchArgs;
+          console.error("Tool arguments:", JSON.stringify(args, null, 2));
+          
           if (!args.package_name) {
             throw new Error("Missing required argument: package_name");
           }
