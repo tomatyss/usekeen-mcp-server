@@ -12,12 +12,54 @@ MCP Server for the UseKeen Package Documentation Search API, enabling Claude and
      - `query` (string): Search term to find specific information within the package/service documentation (e.g. 'file upload example', 'authentication methods')
    - Returns: Documentation search results with relevant matches, URLs, and snippets
 
-## Setup
+## Prerequisites
 
-1. Get a UseKeen API key from the UseKeen service
-2. Set up the environment with your API key as shown below
+1. **UseKeen API Key**: Get a UseKeen API key from the UseKeen service
+2. **Node.js** (for NPX installation) or **Docker** (for Docker installation)
+3. **Claude Desktop** or **VS Code with MCP extension**
 
-## Usage with Claude Desktop
+## Installation
+
+### Option 1: NPX (Recommended)
+
+The easiest way to use this MCP server is via NPX:
+
+```bash
+npx usekeen-mcp
+```
+
+### Option 2: Docker
+
+You can also run the server using Docker:
+
+```bash
+docker run -e USEKEEN_API_KEY=your_api_key_here mcp/usekeen
+```
+
+### Option 3: Local Development
+
+For local development or manual installation:
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd usekeen-mcp
+
+# Copy environment file and add your API key
+cp .env.example .env
+# Edit .env and add your USEKEEN_API_KEY
+
+# Install dependencies
+npm install
+
+# Build and run
+npm run build
+npm start
+```
+
+## Configuration
+
+### Usage with Claude Desktop
 
 Add the following to your `claude_desktop_config.json`:
 
@@ -53,7 +95,7 @@ Add the following to your `claude_desktop_config.json`:
         "--rm",
         "-e",
         "USEKEEN_API_KEY",
-        "usekeen-mcp"
+        "mcp/usekeen"
       ],
       "env": {
         "USEKEEN_API_KEY": "your_api_key_here"
@@ -87,7 +129,7 @@ Optionally, you can add it to a file called `.vscode/mcp.json` in your workspace
     "servers": {
       "usekeen": {
         "command": "npx",
-        "args": ["-y", "@modelcontextprotocol/server-usekeen"],
+        "args": ["-y", "usekeen-mcp"],
         "env": {
           "USEKEEN_API_KEY": "${input:usekeen_api_key}"
         }

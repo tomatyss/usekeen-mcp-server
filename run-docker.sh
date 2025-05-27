@@ -17,10 +17,10 @@ fi
 
 # Build the Docker image
 echo "Building Docker image..."
-docker build -t usekeen-mcp .
+docker build -t mcp/usekeen .
 
 # Run the Docker container
 echo "Running UseKeen MCP server..."
-docker run -e USEKEEN_API_KEY=$USEKEEN_API_KEY usekeen-mcp
+docker run -e USEKEEN_API_KEY=$USEKEEN_API_KEY mcp/usekeen
 
 echo "Server stopped"
