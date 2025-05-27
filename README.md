@@ -30,7 +30,7 @@ Add the following to your `claude_desktop_config.json`:
       "command": "npx",
       "args": [
         "-y",
-        "@modelcontextprotocol/server-usekeen"
+        "usekeen-mcp"
       ],
       "env": {
         "USEKEEN_API_KEY": "your_api_key_here"
@@ -53,7 +53,7 @@ Add the following to your `claude_desktop_config.json`:
         "--rm",
         "-e",
         "USEKEEN_API_KEY",
-        "mcp/usekeen"
+        "usekeen-mcp"
       ],
       "env": {
         "USEKEEN_API_KEY": "your_api_key_here"
