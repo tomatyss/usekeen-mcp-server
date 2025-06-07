@@ -27,6 +27,15 @@ interface PackageDocSearchArgs {
 }
 
 /**
+ * Interface for package search arguments
+ * Defines the structure of arguments passed to the usekeen_package_search tool
+ */
+interface PackageSearchArgs {
+  query: string;
+  max_results?: number;
+}
+
+/**
  * Tool definition for package documentation search
  * This tool allows searching for documentation of packages and services
  */
@@ -46,6 +55,32 @@ const packageDocSearchTool: Tool = {
       }
     },
     required: ["package_name"]
+  }
+};
+
+/**
+ * Tool definition for package search
+ * This tool allows searching for packages by name or description to discover relevant packages
+ */
+const packageSearchTool: Tool = {
+  name: "usekeen_package_search",
+  description: "Search for packages by name or description to discover relevant packages before diving into their documentation",
+  inputSchema: {
+    type: "object",
+    properties: {
+      query: {
+        type: "string",
+        description: "Search query to find relevant packages (e.g. 'web framework', 'authentication', 'database orm')"
+      },
+      max_results: {
+        type: "number",
+        description: "Maximum number of packages to return (1-100, default: 10)",
+        minimum: 1,
+        maximum: 100,
+        default: 10
+      }
+    },
+    required: ["query"]
   }
 };
 
@@ -108,6 +143,42 @@ class UseKeenClient {
       throw error;
     }
   }
+
+  /**
+   * Search for packages by name or description
+   * @param query - The search query to find relevant packages
+   * @param maxResults - Maximum number of packages to return (1-100, default: 10)
+   * @returns The search results from the UseKeen API
+   */
+  async searchPackages(query: string, maxResults: number = 10): Promise<any> {
+    try {
+      // Create URL with query parameters
+      const url = new URL(`${this.baseUrl}/packages/search`);
+      url.searchParams.append('api_key', this.apiKey);
+      url.searchParams.append('q', query);
+      url.searchParams.append('max_results', maxResults.toString());
+      
+      // Log the request details for debugging
+      console.error(`Package Search API Request URL: ${url.toString()}`);
+      
+      const response = await fetch(url.toString(), {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Package search API request failed: ${response.status} ${errorText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error("Error calling UseKeen Package Search API:", error);
+      throw error;
+    }
+  }
 }
 
 /**
@@ -165,6 +236,29 @@ async function main() {
           return {
             content: [{ type: "text", text: JSON.stringify(response) }],
           };
+        } else if (request.params.name === "usekeen_package_search") {
+          const args = request.params.arguments as unknown as PackageSearchArgs;
+          console.error("Package search tool arguments:", JSON.stringify(args, null, 2));
+          
+          if (!args.query) {
+            throw new Error("Missing required argument: query");
+          }
+          
+          const maxResults = args.max_results || 10;
+          
+          // Validate max_results is within acceptable range
+          if (maxResults < 1 || maxResults > 100) {
+            throw new Error("max_results must be between 1 and 100");
+          }
+          
+          const response = await useKeenClient.searchPackages(
+            args.query,
+            maxResults
+          );
+          
+          return {
+            content: [{ type: "text", text: JSON.stringify(response) }],
+          };
         } else {
           throw new Error(`Unknown tool: ${request.params.name}`);
         }
@@ -188,7 +282,7 @@ async function main() {
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     console.error("Received ListToolsRequest");
     return {
-      tools: [packageDocSearchTool],
+      tools: [packageDocSearchTool, packageSearchTool],
     };
   });
 
