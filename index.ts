@@ -185,7 +185,7 @@ class UseKeenClient {
  * Main function to start the MCP server
  * Sets up the server, registers request handlers, and connects to the transport
  */
-async function main() {
+async function main(): Promise<void> {
   const apiKey = process.env.USEKEEN_API_KEY;
 
   if (!apiKey) {
@@ -202,9 +202,7 @@ async function main() {
       version: "1.0.0",
     },
     {
-      capabilities: {
-        tools: {},
-      },
+      capabilities: {},
     }
   );
 
